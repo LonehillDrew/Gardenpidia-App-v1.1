@@ -1,21 +1,31 @@
-/* GardenPedia workbench: front-end logic. No build step, no framework. */
+/* GardenPedia workbench: front-end logic with multi-user and multi-provider support */
 (function () {
   "use strict";
 
   const GP = window.GP;
+  const AUTH = window.AUTH;
 
-  /* -------------------- storage -------------------- */
+  /* ---- User-scoped Storage ---- */
   const STORE = {
-    get key()    { return localStorage.getItem("gp_api_key") || ""; },
-    set key(v)   { v ? localStorage.setItem("gp_api_key", v) : localStorage.removeItem("gp_api_key"); },
-    get model()  { return localStorage.getItem("gp_model") || GP.DEFAULT_MODEL; },
+    get key() {
+      const provider = AUTH.currentUser?.aiProvider || "claude";
+      if (provider === "claude") {
+        return AUTH.currentUser?.claudeKey || localStorage.getItem("gp_admin_claude_key") || "";
+      } else if (provider === "chatgpt") {
+        return AUTH.currentUser?.chatgptKey || "";
+      }
+      return "";
+    },
+    get model() { return localStorage.getItem("gp_model") || GP.DEFAULT_MODEL; },
     set model(v) { localStorage.setItem("gp_model", v); },
-    get chatHistory() { try { return JSON.parse(localStorage.getItem("gp_chat_history") || "[]"); } catch(_) { return []; } },
-    set chatHistory(v) { localStorage.setItem("gp_chat_history", JSON.stringify(v)); }
+    get chatHistory() { try { return JSON.parse(localStorage.getItem("gp_chat_history_" + AUTH.currentUser.email) || "[]"); } catch(_) { return []; } },
+    set chatHistory(v) { localStorage.setItem("gp_chat_history_" + AUTH.currentUser.email, JSON.stringify(v)); },
+    get aiProvider() { return AUTH.currentUser?.aiProvider || "claude"; },
+    get claudePlan() { return AUTH.currentUser?.claudePlan || "pro"; }
   };
 
-  /* -------------------- tiny helpers -------------------- */
-  const $  = (sel, root) => (root || document).querySelector(sel);
+  /* ---- Tiny helpers ---- */
+  const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -33,10 +43,25 @@
     return null;
   };
 
-  /* -------------------- Claude API (browser, bring-your-own-key) -------------------- */
+  /* ---- Claude API (Browser, bring-your-own-key or admin bypass) ---- */
   async function callClaude({ system, messages, max_tokens = 2000, model }) {
     const key = STORE.key;
-    if (!key) { const e = new Error("No API key set."); e.code = "NO_KEY"; throw e; }
+    const plan = STORE.claudePlan;
+
+    if (!key) {
+      if (plan === "pro" && AUTH.isAdmin()) {
+        const e = new Error("Admin Claude Pro key not configured. Please set it in Settings.");
+        e.code = "NO_ADMIN_KEY";
+        throw e;
+      } else if (plan === "free") {
+        const e = new Error("Free plan requires an API key. Please configure your provider in Settings.");
+        e.code = "NO_KEY";
+        throw e;
+      }
+      const e = new Error("No API key set. Please configure your provider.");
+      e.code = "NO_KEY";
+      throw e;
+    }
 
     let res;
     try {
@@ -52,7 +77,8 @@
       });
     } catch (err) {
       const e = new Error("Could not reach the Anthropic API. Check your connection.");
-      e.code = "NETWORK"; throw e;
+      e.code = "NETWORK";
+      throw e;
     }
 
     if (!res.ok) {
@@ -63,14 +89,16 @@
       else if (res.status === 429) msg = "Rate limit reached. Wait a moment and try again.";
       else if (res.status === 400) msg = "The request was rejected: " + (detail || "bad request") + ".";
       else msg = "Request failed (" + res.status + "). " + detail;
-      const e = new Error(msg); e.status = res.status; throw e;
+      const e = new Error(msg);
+      e.status = res.status;
+      throw e;
     }
 
     const data = await res.json();
     return data.content.filter(b => b.type === "text").map(b => b.text).join("\n").trim();
   }
 
-  /* -------------------- routing -------------------- */
+  /* ---- Routing ---- */
   function show(view) {
     $$(".view").forEach(v => (v.hidden = v.id !== "view-" + view));
     $$(".nav-link").forEach(b => {
@@ -83,19 +111,31 @@
     if (main) main.scrollTop = 0;
   }
 
-  /* -------------------- connection badge -------------------- */
+  /* ---- Connection badge ---- */
   function refreshStatus() {
-    const set = !!STORE.key;
-    const dot = $("#status-dot"), label = $("#status-label"), modelTag = $("#status-model");
-    dot.classList.toggle("is-on", set);
-    label.textContent = set ? "Key set" : "No key";
-    const m = GP.MODELS.find(x => x.id === STORE.model);
-    modelTag.textContent = m ? m.label.split("  ")[0] : STORE.model;
+    const user = AUTH.currentUser;
+    const provider = STORE.aiProvider;
+    const dot = $("#status-dot"), label = $("#status-label"), modelTag = $("#status-model"), userTag = $("#status-user");
+
+    if (userTag && user) {
+      userTag.textContent = user.name + " · ";
+    }
+
+    const hasKey = !!STORE.key;
+    dot.classList.toggle("is-on", hasKey);
+    label.textContent = hasKey ? provider.charAt(0).toUpperCase() + provider.slice(1) + " ready" : "No provider";
+
+    if (provider === "claude") {
+      const m = GP.MODELS.find(x => x.id === STORE.model);
+      modelTag.textContent = m ? m.label.split("  ")[0] : STORE.model;
+    } else if (provider === "chatgpt") {
+      modelTag.textContent = "GPT-4";
+    } else {
+      modelTag.textContent = "Copilot";
+    }
   }
 
-  /* ===================================================================
-     CHAT
-     =================================================================== */
+  /* ===== CHAT ===== */
   const chat = { messages: [], busy: false };
 
   function chatRender() {
@@ -134,7 +174,7 @@
     const input = $("#chat-input");
     const text = input.value.trim();
     if (!text || chat.busy) return;
-    if (!STORE.key) { show("settings"); flash("Set your API key first."); return; }
+    if (!STORE.key) { show("settings"); flash("Configure your AI provider first."); return; }
 
     const error = validateInput(text, "Message");
     if (error) { flash(error); return; }
@@ -158,14 +198,12 @@
     }
   }
 
-  /* ===================================================================
-     FACT FINDER
-     =================================================================== */
+  /* ===== FACT FINDER ===== */
   function metrics(s) {
     return {
-      chars:     [...s].length,
-      words:     (s.trim().match(/\S+/g) || []).length,
-      spaces:    (s.match(/ /g) || []).length,
+      chars: [...s].length,
+      words: (s.trim().match(/\S+/g) || []).length,
+      spaces: (s.match(/ /g) || []).length,
       sentences: (s.match(/[.!?](?=\s|$)/g) || []).length
     };
   }
@@ -248,12 +286,12 @@
   }
 
   async function factFinderRun() {
-    if (!STORE.key) { show("settings"); flash("Set your API key first."); return; }
+    if (!STORE.key) { show("settings"); flash("Configure your AI provider first."); return; }
     const scope = $("#ff-scope").value.trim() || "South Africa";
     const topic = $("#ff-topic").value.trim();
-    const mode  = $("#ff-mode").value;
-    const btn   = $("#ff-run");
-    const out   = $("#ff-output");
+    const mode = $("#ff-mode").value;
+    const btn = $("#ff-run");
+    const out = $("#ff-output");
 
     const scopeError = validateInput(scope, "Geographic scope");
     if (scopeError) { flash(scopeError); return; }
@@ -328,11 +366,9 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  /* ===================================================================
-     RESEARCH
-     =================================================================== */
+  /* ===== RESEARCH ===== */
   async function researchRun() {
-    if (!STORE.key) { show("settings"); flash("Set your API key first."); return; }
+    if (!STORE.key) { show("settings"); flash("Configure your AI provider first."); return; }
     const q = $("#rs-query").value.trim();
     if (!q) { flash("Please enter a research question."); return; }
     const scope = $("#rs-scope").value.trim() || "South Africa";
@@ -363,86 +399,226 @@
     }
   }
 
-  /* ===================================================================
-     SETTINGS
-     =================================================================== */
+  /* ===== SETTINGS ===== */
   function settingsInit() {
-    const keyInput = $("#set-key");
-    keyInput.value = STORE.key;
-    const sel = $("#set-model");
-    sel.innerHTML = "";
-    GP.MODELS.forEach(m => {
-      const o = el("option"); o.value = m.id; o.textContent = m.label;
-      if (m.id === STORE.model) o.selected = true;
-      sel.appendChild(o);
+    const provider = STORE.aiProvider;
+    const providerSelect = $("#set-ai-provider");
+
+    // Set initial provider selection
+    providerSelect.value = provider;
+    updateProviderOptions();
+
+    providerSelect.addEventListener("change", updateProviderOptions);
+
+    // Claude options
+    const claudePlanSelect = $("#set-claude-plan");
+    claudePlanSelect.value = STORE.claudePlan;
+
+    const claudeKeyInput = $("#set-claude-key");
+    claudeKeyInput.value = AUTH.currentUser?.claudeKey || "";
+
+    $("#set-claude-toggle").addEventListener("click", () => {
+      claudeKeyInput.type = claudeKeyInput.type === "password" ? "text" : "password";
+      $("#set-claude-toggle").textContent = claudeKeyInput.type === "password" ? "Show" : "Hide";
     });
 
+    // ChatGPT options
+    const chatgptPlanSelect = $("#set-chatgpt-plan");
+    chatgptPlanSelect.value = AUTH.currentUser?.chatgptPlan || "free";
+
+    const chatgptKeyInput = $("#set-chatgpt-key");
+    chatgptKeyInput.value = AUTH.currentUser?.chatgptKey || "";
+
+    $("#set-chatgpt-toggle").addEventListener("click", () => {
+      chatgptKeyInput.type = chatgptKeyInput.type === "password" ? "text" : "password";
+      $("#set-chatgpt-toggle").textContent = chatgptKeyInput.type === "password" ? "Show" : "Hide";
+    });
+
+    // Copilot options
+    const copilotPlanSelect = $("#set-copilot-plan");
+    copilotPlanSelect.value = AUTH.currentUser?.copilotPlan || "free";
+
+    // Save settings
     $("#set-save").addEventListener("click", () => {
-      const key = keyInput.value.trim();
-      if (!key) { flash("Please enter an API key."); return; }
-      if (!key.startsWith("sk-ant-")) { flash("API key should start with 'sk-ant-'."); return; }
-      STORE.key = key;
-      STORE.model = sel.value;
+      const selectedProvider = providerSelect.value;
+      const users = window.getUsers();
+      const userEmail = AUTH.currentUser.email;
+
+      users[userEmail].aiProvider = selectedProvider;
+
+      if (selectedProvider === "claude") {
+        users[userEmail].claudePlan = claudePlanSelect.value;
+        const claudeKey = claudeKeyInput.value.trim();
+        if (claudeKey) {
+          if (!claudeKey.startsWith("sk-ant-")) {
+            flash("Claude API key should start with 'sk-ant-'.");
+            return;
+          }
+          users[userEmail].claudeKey = claudeKey;
+          if (AUTH.isAdmin()) {
+            localStorage.setItem("gp_admin_claude_key", claudeKey);
+          }
+        }
+      } else if (selectedProvider === "chatgpt") {
+        users[userEmail].chatgptPlan = chatgptPlanSelect.value;
+        const chatgptKey = chatgptKeyInput.value.trim();
+        if (chatgptKey) {
+          if (!chatgptKey.startsWith("sk-")) {
+            flash("ChatGPT API key should start with 'sk-'.");
+            return;
+          }
+          users[userEmail].chatgptKey = chatgptKey;
+        }
+      } else if (selectedProvider === "copilot") {
+        users[userEmail].copilotPlan = copilotPlanSelect.value;
+      }
+
+      AUTH.currentUser.aiProvider = selectedProvider;
+      AUTH.currentUser.claudePlan = users[userEmail].claudePlan;
+      AUTH.currentUser.claudeKey = users[userEmail].claudeKey;
+      AUTH.currentUser.chatgptPlan = users[userEmail].chatgptPlan;
+      AUTH.currentUser.chatgptKey = users[userEmail].chatgptKey;
+      AUTH.currentUser.copilotPlan = users[userEmail].copilotPlan;
+
+      window.saveUsers(users);
       refreshStatus();
-      flash("Saved. Your key stays in this browser only.");
+      flash("Settings saved.");
     });
-    $("#set-clear").addEventListener("click", () => {
-      keyInput.value = ""; STORE.key = ""; refreshStatus();
-      flash("Key cleared from this browser.");
-    });
-    $("#set-toggle").addEventListener("click", () => {
-      keyInput.type = keyInput.type === "password" ? "text" : "password";
-      $("#set-toggle").textContent = keyInput.type === "password" ? "Show" : "Hide";
-    });
+
+    // Test connection
     $("#set-test").addEventListener("click", async () => {
       const btn = $("#set-test"), res = $("#set-test-result");
-      const key = keyInput.value.trim();
-      if (!key) { res.textContent = "Enter a key first."; res.className = "test-result error-note"; return; }
-      if (!key.startsWith("sk-ant-")) { res.textContent = "Key should start with 'sk-ant-'."; res.className = "test-result error-note"; return; }
-      STORE.key = key; STORE.model = sel.value; refreshStatus();
-      btn.disabled = true; btn.textContent = "Testing…"; res.textContent = "";
+      btn.disabled = true;
+      btn.textContent = "Testing…";
+      res.textContent = "";
+
       try {
         await callClaude({ messages: [{ role: "user", content: "ping" }], max_tokens: 5 });
-        res.textContent = "Connection works."; res.className = "test-result ok-note";
+        res.textContent = "Connection works!";
+        res.className = "test-result ok-note";
       } catch (e) {
-        res.textContent = e.message; res.className = "test-result error-note";
+        res.textContent = e.message;
+        res.className = "test-result error-note";
       } finally {
-        btn.disabled = false; btn.textContent = "Test connection";
+        btn.disabled = false;
+        btn.textContent = "Test Connection";
       }
+    });
+
+    // Update user profile display
+    const user = AUTH.currentUser;
+    $("#user-display-name").textContent = user.name;
+    $("#user-display-email").textContent = user.email;
+    $("#user-account-type").textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+
+    // Admin section
+    if (AUTH.isAdmin()) {
+      const adminSection = $("#admin-section");
+      adminSection.hidden = false;
+      renderTeamMembers();
+
+      $("#invite-member").addEventListener("click", () => {
+        const email = prompt("Enter team member email:");
+        if (!email) return;
+
+        const users = window.getUsers();
+        if (users[email]) {
+          flash("User already exists.");
+          return;
+        }
+
+        users[email] = {
+          email,
+          name: email.split("@")[0],
+          password: hashPassword("welcome123"),
+          role: "user",
+          aiProvider: "claude",
+          claudePlan: "free",
+          claudeKey: null,
+          chatgptPlan: "free",
+          chatgptKey: null,
+          copilotPlan: "free",
+          createdAt: new Date().toISOString()
+        };
+
+        window.saveUsers(users);
+        renderTeamMembers();
+        flash("Team member invited. They can sign in with password: welcome123");
+      });
+    }
+  }
+
+  function updateProviderOptions() {
+    const provider = $("#set-ai-provider").value;
+    $("#claude-options").hidden = provider !== "claude";
+    $("#chatgpt-options").hidden = provider !== "chatgpt";
+    $("#copilot-options").hidden = provider !== "copilot";
+  }
+
+  function renderTeamMembers() {
+    const list = $("#team-members-list");
+    const users = window.getUsers();
+    list.innerHTML = "";
+
+    Object.values(users).forEach(user => {
+      const item = el("div", "team-member-item");
+      item.innerHTML = `
+        <div class="team-member-info">
+          <strong>${esc(user.name)}</strong><br>
+          <small>${esc(user.email)}</small>
+        </div>
+        <div class="team-member-provider">
+          <small>${user.aiProvider.toUpperCase()}</small>
+        </div>
+      `;
+      list.appendChild(item);
     });
   }
 
-  /* -------------------- toast -------------------- */
+  function hashPassword(password) {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  /* ---- Toast ---- */
   let flashTimer;
   function flash(msg) {
     const t = $("#toast");
-    t.textContent = msg; t.classList.add("is-on");
+    t.textContent = msg;
+    t.classList.add("is-on");
     clearTimeout(flashTimer);
     flashTimer = setTimeout(() => t.classList.remove("is-on"), 3200);
   }
 
-  /* -------------------- keyboard shortcuts -------------------- */
+  /* ---- Keyboard Shortcuts ---- */
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") { e.preventDefault(); show("home"); }
     if ((e.ctrlKey || e.metaKey) && e.key === "k") { e.preventDefault(); show("chat"); }
   });
 
-  /* -------------------- wire up -------------------- */
+  /* ---- Initialize ---- */
   function init() {
+    if (!AUTH.currentUser) return;
+
     $$(".nav-link").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
 
-    // chat
+    // Chat
     $("#chat-send").addEventListener("click", chatSend);
     const ci = $("#chat-input");
     ci.addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); chatSend(); }
     });
     ci.addEventListener("input", () => { ci.style.height = "auto"; ci.style.height = ci.scrollHeight + "px"; });
-    $("#chat-clear").addEventListener("click", () => { chat.messages = []; localStorage.removeItem("gp_chat_history"); chatRender(); flash("Chat cleared."); });
+    $("#chat-clear").addEventListener("click", () => { chat.messages = []; localStorage.removeItem("gp_chat_history_" + AUTH.currentUser.email); chatRender(); flash("Chat cleared."); });
     loadChatHistory();
     chatRender();
 
-    // fact finder
+    // Fact Finder
     const modeSel = $("#ff-mode");
     GP.FACT_CATEGORIES.forEach(c => { const o = el("option"); o.value = c; o.textContent = c; modeSel.appendChild(o); });
     $("#ff-run").addEventListener("click", factFinderRun);
@@ -461,17 +637,21 @@
       flash("Report downloaded.");
     });
 
-    // research
+    // Research
     $("#rs-run").addEventListener("click", researchRun);
 
-    // settings
+    // Settings
     settingsInit();
     refreshStatus();
 
-    // initial route
+    // Initial route
     const start = (location.hash || "#home").slice(1);
     show($("#view-" + start) ? start : "home");
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();

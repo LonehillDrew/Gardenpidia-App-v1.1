@@ -379,6 +379,243 @@ select { cursor: pointer; }
   .ff-controls, .rs-controls { grid-template-columns: 1fr; }
 }
 
+/* ---------- login screen ---------- */
+.login-screen {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2f6b4f 0%, #234f3b 100%);
+  padding: 20px;
+}
+
+.login-container {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(22,36,30,.15);
+  width: 100%;
+  max-width: 400px;
+  padding: 40px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-header h1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--leaf);
+}
+
+.login-header p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-form h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  transition: border-color .15s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--leaf);
+  background: rgba(47,107,79,.02);
+}
+
+.form-group input[type="checkbox"] {
+  width: auto;
+}
+
+.login-btn {
+  align-self: stretch;
+  margin-top: 8px;
+}
+
+.login-error {
+  background: rgba(178,107,46,.1);
+  color: var(--ochre);
+  border: 1px solid rgba(178,107,46,.3);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 0;
+  text-align: center;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 12px 0;
+}
+
+.login-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--leaf);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+  transition: color .15s ease;
+}
+
+.link-btn:hover {
+  color: var(--leaf-deep);
+}
+
+/* ---------- settings enhancements ---------- */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-section h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.provider-options {
+  margin-left: 12px;
+  padding: 12px 0;
+  border-left: 2px solid var(--leaf);
+  padding-left: 12px;
+}
+
+.provider-options.hidden {
+  display: none;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
+
+.user-info {
+  background: rgba(47,107,79,.05);
+  border: 1px solid rgba(47,107,79,.15);
+  border-radius: var(--r);
+  padding: 12px;
+  font-size: 13.5px;
+}
+
+.user-info p {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.user-info strong {
+  color: var(--ink);
+}
+
+/* ---------- team members ---------- */
+.team-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.team-member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(47,107,79,.05);
+  border: 1px solid rgba(47,107,79,.15);
+  border-radius: var(--r);
+  font-size: 13px;
+}
+
+.team-member-info {
+  flex: 1;
+}
+
+.team-member-info strong {
+  display: block;
+  color: var(--ink);
+}
+
+.team-member-info small {
+  color: var(--muted);
+}
+
+.team-member-provider {
+  padding: 4px 8px;
+  background: rgba(47,107,79,.15);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--leaf);
+  letter-spacing: .05em;
+}
+
+/* ---------- status enhancements ---------- */
+.status-user {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

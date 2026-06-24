@@ -11,7 +11,64 @@
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
-  <div class="app">
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-container">
+      <div class="login-header">
+        <h1>GardenPedia Workbench</h1>
+        <p>Editorial workbench for sourced South African garden knowledge</p>
+      </div>
+
+      <div id="login-form" class="login-form">
+        <h2>Sign In</h2>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label for="login-remember">
+            <input type="checkbox" id="login-remember" checked>
+            Remember me
+          </label>
+        </div>
+        <button id="login-submit" class="btn-primary login-btn">Sign In</button>
+        <p id="login-error" class="login-error"></p>
+        <hr class="divider">
+        <p class="login-hint">First time? <button id="toggle-signup" type="button" class="link-btn">Create account</button></p>
+      </div>
+
+      <div id="signup-form" class="login-form" hidden>
+        <h2>Create Account</h2>
+        <div class="form-group">
+          <label for="signup-name">Full Name</label>
+          <input type="text" id="signup-name" placeholder="John Doe">
+        </div>
+        <div class="form-group">
+          <label for="signup-email">Email</label>
+          <input type="email" id="signup-email" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="signup-password">Password</label>
+          <input type="password" id="signup-password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="signup-password-confirm">Confirm Password</label>
+          <input type="password" id="signup-password-confirm" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <button id="signup-submit" class="btn-primary login-btn">Create Account</button>
+        <p id="signup-error" class="login-error"></p>
+        <hr class="divider">
+        <p class="login-hint"><button id="toggle-login" type="button" class="link-btn">Back to sign in</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app-screen" class="app" hidden>
 
     <header class="topbar">
       <div class="wordmark">
@@ -19,6 +76,7 @@
         <span class="wordmark-name">GardenPedia</span>
       </div>
       <div class="status" title="Connection">
+        <span id="status-user" class="status-user"></span>
         <span id="status-model" class="status-model">Sonnet 4.6</span>
         <span id="status-dot" class="status-dot" aria-hidden="true"></span>
         <span id="status-label" class="status-label">No key</span>
@@ -58,7 +116,7 @@
           </button>
           <button class="entry" data-view="settings">
             <span class="entry-no">05</span><span class="entry-title">Settings</span>
-            <span class="entry-desc">Connect your Anthropic API key and pick a model. The key stays in this browser.</span>
+            <span class="entry-desc">Configure your AI provider and view team members.</span>
           </button>
         </div>
       </section>
@@ -125,25 +183,98 @@
       <section class="view" id="view-settings" hidden>
         <div class="view-head"><h2 class="view-title">Settings</h2></div>
         <div class="settings-panel">
-          <label class="field">
-            <span class="field-label">Anthropic API key</span>
-            <p class="settings-note" style="margin: 4px 0 8px;">Get your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Never share it.</p>
-            <div class="key-row">
-              <input id="set-key" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" aria-label="Anthropic API key input">
-              <button id="set-toggle" class="btn-ghost">Show</button>
+          <!-- AI Provider Selection -->
+          <div class="settings-section">
+            <h3>AI Provider</h3>
+            <label class="field">
+              <span class="field-label">Select your AI provider</span>
+              <select id="set-ai-provider">
+                <option value="claude">Claude</option>
+                <option value="chatgpt">ChatGPT</option>
+                <option value="copilot">MS Copilot</option>
+              </select>
+            </label>
+
+            <!-- Claude Options -->
+            <div id="claude-options" class="provider-options">
+              <label class="field">
+                <span class="field-label">Claude Plan</span>
+                <select id="set-claude-plan">
+                  <option value="free">Free</option>
+                  <option value="pro">Pro</option>
+                  <option value="max">Max</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">Claude API Key (if available)</span>
+                <p class="settings-note" style="margin: 4px 0 8px;">Get your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Leave empty to use admin's Claude Pro.</p>
+                <div class="key-row">
+                  <input id="set-claude-key" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+                  <button id="set-claude-toggle" class="btn-ghost">Show</button>
+                </div>
+              </label>
             </div>
-          </label>
-          <label class="field">
-            <span class="field-label">Model</span>
-            <select id="set-model"></select>
-          </label>
+
+            <!-- ChatGPT Options -->
+            <div id="chatgpt-options" class="provider-options" hidden>
+              <label class="field">
+                <span class="field-label">ChatGPT Plan</span>
+                <select id="set-chatgpt-plan">
+                  <option value="free">Free</option>
+                  <option value="pro">Pro</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">ChatGPT API Key</span>
+                <p class="settings-note" style="margin: 4px 0 8px;">Get your key from <a href="https://platform.openai.com" target="_blank" rel="noopener">platform.openai.com</a>.</p>
+                <div class="key-row">
+                  <input id="set-chatgpt-key" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+                  <button id="set-chatgpt-toggle" class="btn-ghost">Show</button>
+                </div>
+              </label>
+            </div>
+
+            <!-- Copilot Options -->
+            <div id="copilot-options" class="provider-options" hidden>
+              <label class="field">
+                <span class="field-label">MS Copilot Plan</span>
+                <select id="set-copilot-plan">
+                  <option value="free">Free</option>
+                  <option value="paid">Paid</option>
+                </select>
+              </label>
+              <p class="settings-note">MS Copilot integration coming soon. Currently use Claude or ChatGPT.</p>
+            </div>
+          </div>
+
           <div class="settings-actions">
-            <button id="set-save" class="btn-primary">Save</button>
-            <button id="set-test" class="btn-ghost">Test connection</button>
-            <button id="set-clear" class="btn-ghost">Clear key</button>
+            <button id="set-save" class="btn-primary">Save Settings</button>
+            <button id="set-test" class="btn-ghost">Test Connection</button>
           </div>
           <p id="set-test-result" class="test-result"></p>
-          <p class="settings-note">Your key is stored only in this browser, in local storage, and is sent only to Anthropic when you make a request. It is never written to the repository or to GitHub. Do not enter your key on a shared or public computer. To revoke it, clear it here or rotate the key in your Anthropic console.</p>
+
+          <hr class="settings-divider">
+
+          <!-- Team Members (Admin Only) -->
+          <div id="admin-section" class="settings-section" hidden>
+            <h3>Team Members (Admin)</h3>
+            <p class="settings-note">Manage team member access and their AI provider settings.</p>
+            <div id="team-members-list" class="team-members-list"></div>
+            <button id="invite-member" class="btn-ghost">Invite Team Member</button>
+          </div>
+
+          <!-- User Profile -->
+          <div class="settings-section">
+            <h3>Your Profile</h3>
+            <div class="user-info">
+              <p><strong>Name:</strong> <span id="user-display-name"></span></p>
+              <p><strong>Email:</strong> <span id="user-display-email"></span></p>
+              <p><strong>Account Type:</strong> <span id="user-account-type"></span></p>
+            </div>
+            <button id="logout-btn" class="btn-ghost">Sign Out</button>
+          </div>
+
+          <p class="settings-note">Your settings are stored securely in your browser.</p>
         </div>
       </section>
 
@@ -154,7 +285,8 @@
           <p>This site applies the GardenPedia house rules to every request: UK English, no em dashes, a South African default scope, metric units, Rands, and DD/MM/YYYY dates. It separates verified facts from assumptions, flags gaps as [MISSING INFO], and asks for named, verifiable sources.</p>
           <p><strong>Reconstructed rules.</strong> The behaviour rules were rebuilt from prior GardenPedia work, not read from your canonical skill repo. They all live in one file, <code>assets/gardenpedia-config.js</code>. When you push your real skill files, reconcile that file against them so the site and the skill stay in step.</p>
           <p><strong>Fact Finder format.</strong> Four fixed categories, ten facts each. Every fact is checked in the browser for character count (223 to 354), word count (35 to 59), space count (35 to 58), and three sentences. The metric strip under each card is the specimen label: green means within range, ochre means out of range. Machine validation is shown, but you remain the editor.</p>
-          <p><strong>Connection.</strong> The site calls the Anthropic API directly from your browser using a key you provide in Settings. There is no server and no proxy, so nothing about your key touches GitHub. If you later want the key hidden from the browser entirely, the frontend can point at a small serverless proxy with almost no change.</p>
+          <p><strong>Multi-user support.</strong> Team members can use the app with their own AI provider settings. Admin can manage team access and configure the main Claude Pro plan bypass.</p>
+          <p><strong>Connection.</strong> The site calls AI APIs directly from your browser. Your credentials stay in your browser only. Nothing touches GitHub.</p>
         </div>
       </section>
 
@@ -164,6 +296,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/gardenpedia-config.js"></script>
+  <script src="assets/auth.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>
