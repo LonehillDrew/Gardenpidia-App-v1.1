@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GardenPedia Workbench</title>
+  <meta name="description" content="An editor's workbench for sourced South African garden knowledge.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="app">
+
+    <header class="topbar">
+      <div class="wordmark">
+        <span class="wordmark-eyebrow">Editorial workbench</span>
+        <span class="wordmark-name">GardenPedia</span>
+      </div>
+      <div class="status" title="Connection">
+        <span id="status-model" class="status-model">Sonnet 4.6</span>
+        <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+        <span id="status-label" class="status-label">No key</span>
+      </div>
+    </header>
+
+    <nav class="sidebar" aria-label="Sections">
+      <button class="nav-link" data-view="home"><span class="nav-mark">01</span>Home</button>
+      <button class="nav-link" data-view="chat"><span class="nav-mark">02</span>Chat</button>
+      <button class="nav-link" data-view="factfinder"><span class="nav-mark">03</span>Fact Finder</button>
+      <button class="nav-link" data-view="research"><span class="nav-mark">04</span>Research</button>
+      <button class="nav-link" data-view="settings"><span class="nav-mark">05</span>Settings</button>
+      <button class="nav-link" data-view="about"><span class="nav-mark">06</span>About</button>
+    </nav>
+
+    <main class="workspace" id="workspace">
+
+      <!-- HOME -->
+      <section class="view" id="view-home">
+        <div class="hero">
+          <p class="hero-eyebrow">Sourced. South African by default. No invented context.</p>
+          <h1 class="hero-title">An editor's workbench for sourced garden knowledge.</h1>
+          <p class="hero-lead">Talk to your GardenPedia AI, generate format-checked Fact Finder batches, and run sourced research, all under one set of house rules. Verified facts stay separate from assumptions, and gaps are flagged, never filled with guesses.</p>
+        </div>
+        <div class="card-grid">
+          <button class="entry" data-view="chat">
+            <span class="entry-no">02</span><span class="entry-title">Chat</span>
+            <span class="entry-desc">A working conversation with your GardenPedia AI, RCTIO applied automatically.</span>
+          </button>
+          <button class="entry" data-view="factfinder">
+            <span class="entry-no">03</span><span class="entry-title">Fact Finder</span>
+            <span class="entry-desc">Generate 40 facts across the four fixed categories, each checked against the format ranges.</span>
+          </button>
+          <button class="entry" data-view="research">
+            <span class="entry-no">04</span><span class="entry-title">Research</span>
+            <span class="entry-desc">A single sourced answer with a named source list and explicit gap flags.</span>
+          </button>
+          <button class="entry" data-view="settings">
+            <span class="entry-no">05</span><span class="entry-title">Settings</span>
+            <span class="entry-desc">Connect your Anthropic API key and pick a model. The key stays in this browser.</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- CHAT -->
+      <section class="view" id="view-chat" hidden>
+        <div class="view-head">
+          <h2 class="view-title">Chat</h2>
+          <button id="chat-clear" class="btn-ghost">Clear</button>
+        </div>
+        <div id="chat-log" class="chat-log" aria-live="polite" aria-label="Chat messages"></div>
+        <div class="composer">
+          <textarea id="chat-input" rows="1" placeholder="Write a request. It will be reframed into RCTIO and answered under house rules." aria-label="Chat message input"></textarea>
+          <button id="chat-send" class="btn-primary" title="Send message (Shift+Enter for new line)">Send</button>
+        </div>
+        <p class="shortcuts-hint">💡 Tip: Cmd/Ctrl+K to jump to Chat, Escape to go Home. Chat history auto-saves.</p>
+      </section>
+
+      <!-- FACT FINDER -->
+      <section class="view" id="view-factfinder" hidden>
+        <div class="view-head"><h2 class="view-title">Fact Finder</h2></div>
+        <div class="ff-controls">
+          <label class="field">
+            <span class="field-label">Geographic scope</span>
+            <input id="ff-scope" type="text" value="South Africa" autocomplete="off">
+          </label>
+          <label class="field">
+            <span class="field-label">Theme or focus (optional)</span>
+            <input id="ff-topic" type="text" placeholder="e.g. indigenous bulbs, water-wise gardening" autocomplete="off">
+          </label>
+          <label class="field field-narrow">
+            <span class="field-label">Batch</span>
+            <select id="ff-mode">
+              <option value="all">All four categories (40 facts)</option>
+            </select>
+          </label>
+          <button id="ff-run" class="btn-primary">Generate facts</button>
+        </div>
+        <div id="ff-actions" class="ff-actions" hidden>
+          <button id="ff-copy" class="btn-ghost">Copy facts</button>
+          <button id="ff-download" class="btn-ghost">Download report (.md)</button>
+        </div>
+        <div id="ff-output" class="ff-output"></div>
+      </section>
+
+      <!-- RESEARCH -->
+      <section class="view" id="view-research" hidden>
+        <div class="view-head"><h2 class="view-title">Research</h2></div>
+        <div class="rs-controls">
+          <label class="field field-narrow">
+            <span class="field-label">Geographic scope</span>
+            <input id="rs-scope" type="text" value="South Africa" autocomplete="off">
+          </label>
+          <label class="field">
+            <span class="field-label">Question</span>
+            <textarea id="rs-query" rows="3" placeholder="Ask a research question. The answer comes with a named source list and gap flags."></textarea>
+          </label>
+          <button id="rs-run" class="btn-primary">Run research</button>
+        </div>
+        <div id="rs-output" class="rs-output"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings" hidden>
+        <div class="view-head"><h2 class="view-title">Settings</h2></div>
+        <div class="settings-panel">
+          <label class="field">
+            <span class="field-label">Anthropic API key</span>
+            <p class="settings-note" style="margin: 4px 0 8px;">Get your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Never share it.</p>
+            <div class="key-row">
+              <input id="set-key" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" aria-label="Anthropic API key input">
+              <button id="set-toggle" class="btn-ghost">Show</button>
+            </div>
+          </label>
+          <label class="field">
+            <span class="field-label">Model</span>
+            <select id="set-model"></select>
+          </label>
+          <div class="settings-actions">
+            <button id="set-save" class="btn-primary">Save</button>
+            <button id="set-test" class="btn-ghost">Test connection</button>
+            <button id="set-clear" class="btn-ghost">Clear key</button>
+          </div>
+          <p id="set-test-result" class="test-result"></p>
+          <p class="settings-note">Your key is stored only in this browser, in local storage, and is sent only to Anthropic when you make a request. It is never written to the repository or to GitHub. Do not enter your key on a shared or public computer. To revoke it, clear it here or rotate the key in your Anthropic console.</p>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="view" id="view-about" hidden>
+        <div class="view-head"><h2 class="view-title">About this build</h2></div>
+        <div class="prose about">
+          <p>This site applies the GardenPedia house rules to every request: UK English, no em dashes, a South African default scope, metric units, Rands, and DD/MM/YYYY dates. It separates verified facts from assumptions, flags gaps as [MISSING INFO], and asks for named, verifiable sources.</p>
+          <p><strong>Reconstructed rules.</strong> The behaviour rules were rebuilt from prior GardenPedia work, not read from your canonical skill repo. They all live in one file, <code>assets/gardenpedia-config.js</code>. When you push your real skill files, reconcile that file against them so the site and the skill stay in step.</p>
+          <p><strong>Fact Finder format.</strong> Four fixed categories, ten facts each. Every fact is checked in the browser for character count (223 to 354), word count (35 to 59), space count (35 to 58), and three sentences. The metric strip under each card is the specimen label: green means within range, ochre means out of range. Machine validation is shown, but you remain the editor.</p>
+          <p><strong>Connection.</strong> The site calls the Anthropic API directly from your browser using a key you provide in Settings. There is no server and no proxy, so nothing about your key touches GitHub. If you later want the key hidden from the browser entirely, the frontend can point at a small serverless proxy with almost no change.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/gardenpedia-config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
