@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body>
+<body class="locked">
   <div class="app">
 
     <header class="topbar">
@@ -19,9 +19,11 @@
         <span class="wordmark-name">GardenPedia</span>
       </div>
       <div class="status" title="Connection">
+        <span id="whoami" class="whoami"></span>
         <span id="status-model" class="status-model">Sonnet 4.6</span>
         <span id="status-dot" class="status-dot" aria-hidden="true"></span>
         <span id="status-label" class="status-label">No key</span>
+        <button id="signout" class="auth-signout">Sign out</button>
       </div>
     </header>
 
@@ -159,9 +161,47 @@
     </main>
   </div>
 
+  <div id="auth-gate" class="auth-gate">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-eyebrow">Editorial workbench</span>
+        <span class="auth-name">GardenPedia</span>
+      </div>
+
+      <form id="auth-signin" class="auth-form" autocomplete="off" onsubmit="return false">
+        <h2 class="auth-title">Sign in</h2>
+        <label class="field"><span class="field-label">Email or username</span>
+          <input id="auth-si-email" type="text" placeholder="admin" autocomplete="username"></label>
+        <label class="field"><span class="field-label">Password</span>
+          <input id="auth-si-pass" type="password" placeholder="Password" autocomplete="current-password"></label>
+        <button id="auth-si-btn" type="button" class="btn-primary auth-submit">Sign in</button>
+        <p id="auth-signin-msg" class="auth-msg"></p>
+        <p class="auth-switch">First time? <a href="#" id="auth-to-create">Create an account</a></p>
+      </form>
+
+      <form id="auth-create" class="auth-form" autocomplete="off" onsubmit="return false" hidden>
+        <h2 class="auth-title">Create account</h2>
+        <label class="field"><span class="field-label">Full name</span>
+          <input id="auth-cr-name" type="text" placeholder="Jane Botha" autocomplete="name"></label>
+        <label class="field"><span class="field-label">Email</span>
+          <input id="auth-cr-email" type="email" placeholder="you@example.com" autocomplete="email"></label>
+        <label class="field"><span class="field-label">Password</span>
+          <input id="auth-cr-pass" type="password" autocomplete="new-password"></label>
+        <label class="field"><span class="field-label">Confirm password</span>
+          <input id="auth-cr-confirm" type="password" autocomplete="new-password"></label>
+        <button id="auth-cr-btn" type="button" class="btn-primary auth-submit">Create account</button>
+        <p id="auth-create-msg" class="auth-msg"></p>
+        <p class="auth-switch"><a href="#" id="auth-to-signin">Back to sign in</a></p>
+      </form>
+
+      <p class="auth-disclaimer">This is a local convenience gate, not secure authentication. The site is static, so anyone with the files can bypass it, and it does not protect your API key.</p>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/gardenpedia-config.js"></script>
+  <script src="assets/auth.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

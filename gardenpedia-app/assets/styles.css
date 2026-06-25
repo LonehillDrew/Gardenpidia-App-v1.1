@@ -346,6 +346,47 @@ select { cursor: pointer; }
   .workspace { padding: 24px 18px 56px; }
 }
 
+/* ---------- auth gate ---------- */
+.auth-gate { display: none; }
+body.locked { overflow: hidden; }
+body.locked .app { display: none; }
+body.locked .auth-gate {
+  display: flex; position: fixed; inset: 0; z-index: 50;
+  align-items: center; justify-content: center;
+  padding: 24px; background: var(--leaf-deep);
+}
+.auth-card {
+  width: 100%; max-width: 384px;
+  background: var(--surface); border-radius: 10px;
+  padding: 30px 30px 24px; box-shadow: 0 18px 50px rgba(0,0,0,.25);
+  border-top: 3px solid var(--leaf);
+}
+.auth-brand { display: flex; flex-direction: column; line-height: 1.05; margin-bottom: 22px; }
+.auth-eyebrow {
+  font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--leaf); font-weight: 600;
+}
+.auth-name { font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -.01em; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-title { font-family: var(--font-display); font-weight: 500; font-size: 21px; margin: 0 0 2px; }
+.auth-submit { width: 100%; margin-top: 4px; }
+.auth-msg { display: none; margin: 0; font-size: 13px; color: var(--muted); }
+.auth-msg.is-on { display: block; }
+.auth-msg.is-error { color: var(--ochre); }
+.auth-switch { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); }
+.auth-switch a { color: var(--leaf-deep); font-weight: 500; }
+.auth-disclaimer {
+  margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 12px; line-height: 1.5; color: var(--muted);
+}
+.whoami { font-size: 12.5px; color: var(--muted); }
+.auth-signout {
+  font-family: var(--font-ui); font-size: 12px; color: var(--muted);
+  background: transparent; border: 1px solid var(--line); border-radius: 100px;
+  padding: 4px 11px; cursor: pointer; transition: background .15s ease;
+}
+.auth-signout:hover { background: rgba(47,107,79,.08); color: var(--ink); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
